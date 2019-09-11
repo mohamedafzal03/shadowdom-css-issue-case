@@ -1,0 +1,121 @@
+<html>
+<head>
+<script>
+// obj assign support
+if (typeof Object.assign !== 'function') {
+  // Must be writable: true, enumerable: false, configurable: true
+  Object.defineProperty(Object, "assign", {
+    value: function assign(target, varArgs) { // .length of function is 2
+      'use strict';
+      if (target === null || target === undefined) {
+        throw new TypeError('Cannot convert undefined or null to object');
+      }
+
+      var to = Object(target);
+
+      for (var index = 1; index < arguments.length; index++) {
+        var nextSource = arguments[index];
+
+        if (nextSource !== null && nextSource !== undefined) { 
+          for (var nextKey in nextSource) {
+            // Avoid bugs when hasOwnProperty is shadowed
+            if (Object.prototype.hasOwnProperty.call(nextSource, nextKey)) {
+              to[nextKey] = nextSource[nextKey];
+            }
+          }
+        }
+      }
+      return to;
+    },
+    writable: true,
+    configurable: true
+  });
+}
+    </script>
+    <script src="shadydom.min.js"></script>
+    <script src="shadycss.min.js"></script>
+  <style>
+  div{
+    color:hotpink;
+  }
+  .p1{
+    font-size: 10rem;
+  }
+  </style>
+</head>
+<body>
+  <shadow-comp></shadow-comp>
+  <shadycss-comp></shadycss-comp>
+  <nonshadow-comp></nonshadow-comp>
+
+  <template id="shadowcomp">
+      <style>
+       .p1{width: 1000px;color:yellow}
+      </style>
+      <h1>Pop-up - this is shadow component (appended shadowDom)</h1>
+      <p class="p1">this is p tag in shadow-comp</p>
+      <div>this is div tagin shadow-comp </div>
+   </template>
+
+  <template id="shadycssComp">
+      <style>
+        p {
+          color: green;
+        }
+      </style>
+      <h1 class="p1">this is shadow component (appended shadowDom with ShadyCSS pollyfill)</h1>
+      <p>this is shadycss Content</p>
+    </template>
+    <template id="nonshadowComp">
+        <h1>Pop-up - this is non shadow component</h1>
+        <p class="p1">this is p tag normal content</p>
+        <div>this is div tag normal content </div>
+      </template>
+</body>
+<script>
+    window.ShadyCSS && ShadyCSS.prepareTemplate(shadycssComp, 'shadycss-comp');
+    class MyElement extends HTMLElement {
+      connectedCallback() {
+        window.ShadyCSS && ShadyCSS.styleElement(this);
+          var shadyShadow = this.attachShadow({mode: 'open'});
+          var s = document.querySelector("#shadycssComp").content;
+      shadyShadow.appendChild(s);
+      }
+    }
+    customElements.define('shadycss-comp', MyElement);
+
+
+
+
+ window.ShadyCSS && ShadyCSS.prepareTemplate(shadowcomp, 'shadow-comp');
+ class shadowCompEle extends HTMLElement {
+    connectedCallback() {
+      window.ShadyCSS && ShadyCSS.styleElement(this);
+      var shadow = this.attachShadow({
+        mode: 'open'
+      });
+      var s = document.querySelector("#shadowcomp").content;
+            shadow.appendChild(s);
+    }
+  }
+  customElements.define('shadow-comp', shadowCompEle);
+
+
+
+
+  class nonshadowCompEle extends HTMLElement {
+    connectedCallback() {
+      var s = document.querySelector("#nonshadowComp").content;
+      this.appendChild(s);
+    }
+  }
+  customElements.define('nonshadow-comp', nonshadowCompEle);
+</script>
+</html>
+
+
+<!-- this file contains the issue that when css applied on particular customElement
+are inherited globally on all custom elements which is not the behaviour
+to be expected after applying Shadow DOM with ShadyCSS.
+this issue occurs only on i.e 11
+reproduce this issue with es5adapter and shadowDom with shadycss v1 -->
